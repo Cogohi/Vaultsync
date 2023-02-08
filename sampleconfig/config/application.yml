@@ -1,0 +1,155 @@
+spring:
+  datasource:
+    url: jdbc:mariadb://yourdbaddr:3066/yourdbname
+    username: yourdbusername
+    password: yourdbpassword
+common:
+  ftpHomeDirs: ./receiver/home
+  vaultPath: ./vault
+  # if you need to shut a sender down for whatever reason
+  # add them to this file.
+  cnDenyList: ./config/deny-sender.txt
+  # The FTP server tells the FTP client which address to
+  # connect back to over the data channel.  You must set
+  # this to avoid it reporting your internal address.
+  #
+  # NOTE: This value must match the common name or one
+  # of the subject alternative names in your client certificate
+  publicAddress: your.domain.com
+  # Turns on all exception stack trace logging for the vaultsync code
+  # Enabling this overrides the secion based setting
+  logAllExceptions: false
+keystores:
+  sharedKeyStore:
+    type: keystore
+    filePath: ./config/yourkeystore.jks
+    filePassword: yourkeystorepassword
+    keyPassword: yourkeypassword
+    keyAlias: yourkeyalias
+  sharedTrustStore:
+    type: truststore
+    filePath: ./config/trust-store.jks
+    filePassword: truststorepassword
+peers:
+  # You can have as many peers as needed.
+  # You can change 'peeralias#' to whatever you want
+  # They must match the sender argument used by the
+  # sending script.  eg. avlis, travellers, etc.
+  peeralias1:
+    # The DNS name that we will use to connect to and verify
+    # connections from.  It must match the common name or one
+    # of the subject alternative names of the peer's client
+    # certificate.
+    host: destination1.com
+    # If the value of host is NOT the client's common name
+    # then the certificate's common name must be set here
+    # or the REST server will reject the connection
+    primaryName: nwn.destination1.com
+    # 3022 and 2221 are the defaults. Change these as needed
+    restPort: 3022
+    ftpsPort: 2221
+    # If you need to disable sending to or receiving from
+    # this server change to false
+    enabled: true
+  peeralias2:
+    host: destination2.com
+    restPort: 3022
+    ftpsPort: 2221
+    enabled: false
+ftps:
+  server:
+    port: 2221
+    keyStore: sharedKeyStore
+    trustStore: sharedTrustStore
+    # 0 means unlimited for the next three properties
+    maxloginnumber: 0
+    maxloginperip: 0
+    uploadrate: 0
+    # The FTP protocol requires a separate data socket and
+    # for legacy reasons prefers a pool of them.  Ten should
+    # be enough.
+    #
+    # If you're running vaultsync in a container don't forget
+    # to forward the range.  See the supplied docker-compose.yml
+    # for an example
+    dataportrange: 30000-30010
+    # Turns on exception stack trace logging for the FTPS server
+    logExceptions: false
+  client:
+    minPoolSize: 5
+    maxPoolSize: 20
+    keyStore: sharedKeyStore
+    trustStore: sharedTrustStore
+    # Turns on exception stack trace logging for the FTPS client
+    logExceptions: false
+sender:
+  keyStore: sharedKeyStore
+  trustStore: sharedTrustStore
+  maxInFlight: 10
+  # The amount of time in seconds that the sender will hold the transfer request
+  transferTimeout: 600
+  # Turns on exception stack trace logging for the sender REST service
+  logExceptions: false
+receiver:
+  # largest bic file in bytes allowed.  -1 is unlimited.
+  maxsize: -1
+  keyStore: sharedKeyStore
+  trustStore: sharedTrustStore
+  serverPort: 3022
+  # This should be subnet the game servers are on
+  #
+  # Docker's default subnets are in the 172.16.0.0/12 subnet
+  # You should tailor this to your environment especially if
+  # your ISP or hosting provider uses either of the private
+  # subnets internally.
+  #
+  # IPv6 localhost, IPv4 localhost, Class B private, Class C private
+  subnet: ::1,127.0.0.1,172.16.0.0/12,192.168.0.0/16
+  # Controls where the sent bic is copied to.  If false it uses the loginname (recommended)
+  # If your vault is segmented by cdkey change this to true
+  vaultByCdkey: false
+  # Turns on exception stack trace logging for the receiver REST service
+  logExceptions: false
+  # The amount of time in seconds that the receiver will hold the transfer details
+  syncTimeout: 600
+  # Validation queries are parameterized SQL and MUST start with the FROM clause
+  # You can add as many queries as neeeded.  Each query is processed in order until
+  # one finds a match and sends the rejection.  If none match the transfer is allowed.
+  #
+  # Parameters
+  # :world  The sending world
+  # :cdkey  The player's cdkey
+  # :login  The player's login
+  # :name The character's name
+  #
+  # Sample queries.  Adjust to your own schema and needs.
+  validationQueries:
+    -
+      # Temporarily disable all transfers
+      query: FROM settings WHERE name = 'disableVaultSync' AND world = 'all' AND val = 'false'
+      rejectionCode: 403
+      rejectionReason: This world is not accepting transfers
+    -
+      # Temporarily disable all transfers from specific world
+      query: FROM settings WHERE name = 'disableVaultSync' AND world = :world val = 'false'
+      rejectionCode: 403
+      rejectionReason: This world is not accepting transfers
+    -
+      # temporary jail
+      query: FROM jail WHERE type = 1 AND ( login = :login OR cdkey = :cdkey )
+      rejectionCode: 403
+      rejectionReason: You've been jailed, please contact your destination for further details
+    -
+      # default key ban
+      query: FROM jail WHERE type = 2 AND ( login = :login OR tag = :cdkey )
+      rejectionCode: 403
+      rejectionReason: You're using a default key.  Please contact your store for a valid key
+    -
+      # full ban
+      query: FROM jail WHERE type > 2 AND ( login = :login OR tag = :cdkey )
+      rejectionCode: 403
+      rejectionReason: You're been banned.  Please contact your destination for further details
+# Enable/Disable loggging
+logging:
+  level:
+    root: INFO

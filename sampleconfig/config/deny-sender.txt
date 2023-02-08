@@ -1,0 +1,5 @@
+# This file is used to deny access to the /v1/sync endpoints and FTPS service
+# If you need to block a sender add them here, one entry per line
+#
+# Example:
+montyhaul.net

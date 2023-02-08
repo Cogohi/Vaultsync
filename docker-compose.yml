@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+  vaultsync:
+    image: vaultsync:latest
+    hostname: vaultsync
+    build:
+      dockerfile: vaultsync/Dockerfile.vaultsync
+    ports:
+      - '3022:3022'
+      - '2221:2221'
+      - '30000-30010:30000-30010'
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./servershared/servervault:/home/vaultsync/vault
+      - ./servershared/vaultsync/config:/home/vaultsync/config
+      - ./servershared/vaultsync/receiver:/home/vaultsync/receiver

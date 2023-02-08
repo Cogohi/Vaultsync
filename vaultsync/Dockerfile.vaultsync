@@ -1,0 +1,5 @@
+FROM eclipse-temurin:17-jdk-focal
+RUN mkdir -p /home/vaultsync
+WORKDIR /home/vaultsync
+ADD --chown=vaultsync:vaultsync vaultsync/vaultsync-0.0.1-SNAPSHOT.jar vaultsync-0.0.1-SNAPSHOT.jar
+ENTRYPOINT ["java", "-jar", "vaultsync-0.0.1-SNAPSHOT.jar"]

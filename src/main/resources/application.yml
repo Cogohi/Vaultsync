@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:mariadb://configureyourdbaddr.local:3066/configureyourdb
+    username: configureyourusername
+    password: configureyourpassword
+logging:
+  level:
+    root: INFO
+    org.apache.ftpserver: WARN
+    org.apache.ftpserver.impl.PassivePorts: ERROR
+    org.apache.mina: WARN
